@@ -48,6 +48,7 @@
 
             this.speed     = 1;
             this.direction = 1;
+            this.radius    = 1;
 
             this.origin   = new THREE.Vector3(0, 0, 0);
             this.position = new THREE.Vector3(0, 1, 0);
@@ -183,6 +184,14 @@
             // 進行方向に少しだけ距離を加算
             this.position.sub(forward);
 
+            var direction = this.position.clone().sub(this.origin);
+            var len = direction.length();
+            if (len > this.radius) {
+                direction.normalize();
+                direction = direction.setLength(this.radius);
+                this.position = (new THREE.Vector3()).addVectors(this.origin, direction);
+            }
+
             var y = this.position.clone().sub(this.origin).normalize();
             var x = y.clone().cross(this.previousForward).normalize();
             var z = x.clone().cross(y).normalize();
@@ -267,18 +276,22 @@
     light.position.set(1, 1, 1);
     scene.add(light);
 
-    var geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+    var geometry = new THREE.BoxGeometry(0.03, 0.03, 0.03);
     var material = new THREE.MeshLambertMaterial({
         color: 0x99ccff
     });
     var cube = new THREE.Mesh(geometry, material);
 
+    var radius = 0.315;
     var playerController = new PlayerController(cube);
     playerController.forward  = new THREE.Vector3(1, 0, 0);
-    playerController.position = new THREE.Vector3(0, 0.51, -1);
+    playerController.position = new THREE.Vector3(0, 0, -radius);
     playerController.origin   = new THREE.Vector3(0, 0, -1);
+    playerController.radius   = radius;
     playerController.speed = 0.01;
     scene.add(playerController.object);
+
+    playerController.move();
 
 
     //////////////////////////////////////////////////
@@ -289,8 +302,8 @@
         var delta = Math.min(timestamp - lastRender, 500);
         lastRender = timestamp;
 
-        earth.rotation.x += delta * 0.000015;
-        earth.rotation.y += delta * 0.000025;
+        // earth.rotation.x += delta * 0.000015;
+        // earth.rotation.y += delta * 0.000025;
 
         // playerController.move();
 
