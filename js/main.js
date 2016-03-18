@@ -67,32 +67,22 @@
          *  キーボード操作をセットアップ
          */
         initEvents: function () {
-            document.addEventListener('keydown', this.handleKeyEvent.bind(this), false);
+            this.pressedKeyCode = {};
+            document.addEventListener('keydown', this.handleKeyDown.bind(this), false);
+            document.addEventListener('keyup',   this.handleKeyUp.bind(this), false);
         },
-        handleKeyEvent: function (e) {
-            switch(e.keyCode) {
-                case 38: // up
-                    this.direction = 1;
-                    this.move();
-                    break;
-                case 40: // down
-                    this.direction = -1;
-                    this.move();
-                    break;
-                case 37: // left
-                    this.rotate(1);
-                    break;
-                case 39: // right
-                    this.rotate(-1);
-                    break;
-            }
+        handleKeyUp: function (e) {
+            this.pressedKeyCode[e.keyCode] = false;
+        },
+        handleKeyDown: function (e) {
+            this.pressedKeyCode[e.keyCode] = true;
         },
 
         /**
          *  前方ベクトルを取得する
          */
         getForward: function () {
-            var forwardVec4 = this.extractVector.clone().applyMatrix4(this.object.matrixWorld);
+            var forwardVec4 = this.extractVector.clone().applyMatrix4(this.object.matrix);
             var forward     = new THREE.Vector3(forwardVec4.x, forwardVec4.y, forwardVec4.z).normalize();
             return forward;
         },
@@ -102,7 +92,7 @@
          */
         rotate: function (dir) {
             var q   = new THREE.Quaternion();
-            var rad = 1 * Math.PI / 180 * dir;
+            var rad = 5 * Math.PI / 180 * dir;
             q.setFromAxisAngle(this.rotateAxis, rad);
 
             var mat = new THREE.Matrix4();
@@ -134,6 +124,15 @@
          *  初期姿勢を初期化
          */
         initPose: function () {
+            
+            var direction = this.position.clone().sub(this.origin);
+            var len = direction.length();
+            if (len > this.radius) {
+                direction.normalize();
+                direction = direction.setLength(this.radius);
+                this.position = (new THREE.Vector3()).addVectors(this.origin, direction);
+            }
+
             var z = this.forward.normalize();
             var y = this.position.clone().sub(this.origin).normalize();
             var x = y.clone().cross(z).normalize();
@@ -170,15 +169,42 @@
         },
 
         /**
-         *  プレイヤーをカメラの向いている先に移動させる
+         *  Upate moving
          */
-        move: function () {
+        update: function () {
 
             if (!this.initializedPose) {
                 this.initPose();
                 this.initializedPose = true;
             }
 
+
+            for (var key in this.pressedKeyCode) {
+                if (this.pressedKeyCode[key]) {
+                    switch(key) {
+                        case '38': // up
+                            this.direction = 1;
+                            this.move();
+                            break;
+                        case '40': // down
+                            this.direction = -1;
+                            this.move();
+                            break;
+                        case '37': // left
+                            this.rotate(1);
+                            break;
+                        case '39': // right
+                            this.rotate(-1);
+                            break;
+                    }
+                }
+            }
+        },
+
+        /**
+         *  プレイヤーをカメラの向いている先に移動させる
+         */
+        move: function () {
             var forward = this.getForward().setLength(this.speed * this.direction);
 
             // 進行方向に少しだけ距離を加算
@@ -291,8 +317,6 @@
     playerController.speed = 0.01;
     scene.add(playerController.object);
 
-    playerController.move();
-
 
     //////////////////////////////////////////////////
 
@@ -305,7 +329,7 @@
         // earth.rotation.x += delta * 0.000015;
         // earth.rotation.y += delta * 0.000025;
 
-        // playerController.move();
+        playerController.update();
 
         renderer.render(scene, camera);
 
